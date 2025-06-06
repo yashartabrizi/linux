@@ -4,7 +4,297 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ربات تحلیلگر رولت اروپایی</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+/* Basic Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Tahoma', 'Helvetica Neue', Arial, sans-serif; /* Common Persian-friendly fonts */
+    line-height: 1.6;
+    background-color: #f4f4f4;
+    color: #333;
+    direction: rtl; /* Right-to-left for Persian */
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    background: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+h1, h2, h3 {
+    color: #333;
+    margin-bottom: 0.75em;
+    text-align: center;
+}
+
+h1 {
+    font-size: 2em;
+    color: #2c3e50; /* Dark blue */
+}
+
+h2 {
+    font-size: 1.5em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5em;
+    margin-top: 20px;
+}
+
+h3 {
+    font-size: 1.2em;
+    color: #2980b9; /* Blue */
+}
+
+/* Input Section */
+.input-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #ecf0f1;
+    border-radius: 5px;
+}
+
+.input-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.input-section input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.number-pad-container {
+    margin-bottom: 15px;
+}
+
+.number-pad-container p {
+    margin-bottom: 10px;
+}
+
+#number-pad {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+.num-btn {
+    padding: 10px;
+    font-size: 1em;
+    background-color: #3498db; /* Blue */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.num-btn:hover {
+    background-color: #2980b9; /* Darker blue */
+}
+
+.num-btn:nth-child(1) { /* Style for 0 */
+    background-color: #2ecc71; /* Green */
+}
+.num-btn:nth-child(1):hover {
+    background-color: #27ae60; /* Darker Green */
+}
+
+
+.entered-numbers-display {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    min-height: 30px;
+}
+
+#entered-numbers-list {
+    font-weight: bold;
+    color: #495057;
+}
+
+button {
+    display: inline-block;
+    background-color: #2c3e50; /* Dark blue/grey */
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    margin: 5px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #34495e; /* Slightly lighter dark blue/grey */
+}
+
+#analyze-button {
+    background-color: #27ae60; /* Green */
+}
+#analyze-button:hover {
+    background-color: #229954; /* Darker Green */
+}
+
+#reset-button {
+    background-color: #e74c3c; /* Red */
+}
+#reset-button:hover {
+    background-color: #c0392b; /* Darker Red */
+}
+
+/* Results Section */
+.results-section {
+    margin-top: 20px;
+}
+
+.analysis-block {
+    background: #f9f9f9;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #eee;
+}
+
+.analysis-block h3 {
+    margin-top: 0;
+}
+
+#frequency-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#frequency-table th, #frequency-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: right;
+}
+
+#frequency-table th {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+#frequency-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.error {
+    color: #c0392b; /* Red */
+    background-color: #fdd;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #c0392b;
+    text-align: center;
+}
+
+#user-guidance p { /* This will be overridden by .guidance-box p styles if #user-guidance also has .guidance-box class */
+    font-style: italic;
+    color: #555;
+    background-color: #eef;
+    padding: 10px;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+}
+
+/* Basic Responsive */
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+    h1 {
+        font-size: 1.8em;
+    }
+    #number-pad {
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    }
+    button, .num-btn {
+        font-size: 0.9em;
+        padding: 8px 12px;
+    }
+}
+
+/* Append to existing style.css */
+
+/* Tooltip icon styling */
+.tooltip-trigger {
+    font-size: 0.8em;
+    color: #3498db; /* Blue, matches other link-like elements */
+    cursor: help;
+    margin-right: 5px; /* In RTL, this is margin-left effectively */
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    padding: 0px 4px;
+    display: inline-block;
+    line-height: 1;
+}
+
+/* Guidance box styling */
+.guidance-box {
+    background-color: #eaf2f8; /* Light blue */
+    border-left: 4px solid #3498db; /* Blue accent */
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.guidance-box p {
+    margin: 0;
+    font-style: italic;
+    color: #2c3e50; /* Darker blue text for readability */
+    /* Resetting properties from the potentially conflicting #user-guidance p */
+    background-color: transparent;
+    border-left: none;
+    padding: 0;
+}
+
+/* For warning/error states in guidance (if script.js applies these classes) */
+.guidance-box p.warning {
+    /* These will apply if script.js adds 'warning' class to the <p> inside .guidance-box */
+    color: #c27d0a; /* Darker orange for text */
+    background-color: #fef9e7; /* Light yellow background */
+    border-left: 4px solid #f39c12 !important; /* Orange accent, !important to override .guidance-box border if needed */
+    padding: 10px; /* Add padding back for these specific states */
+}
+
+.guidance-box p.error {
+    /* These will apply if script.js adds 'error' class to the <p> inside .guidance-box */
+    color: #c0392b; /* Red for text */
+    background-color: #fdedec; /* Light red background */
+    border-left: 4px solid #e74c3c !important; /* Red accent, !important to override .guidance-box border if needed */
+    padding: 10px; /* Add padding back for these specific states */
+}
+
+/* Ensure the error message div style is consistent */
+#error-message.error { /* This is already defined, but ensure consistency or enhance if needed */
+    color: #c0392b;
+    background-color: #fdd;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #c0392b;
+    text-align: center;
+}
+    </style>
 </head>
 <body>
     <div class="container">
@@ -120,6 +410,319 @@
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const numbersInput = document.getElementById('numbers-input');
+    const numberPad = document.getElementById('number-pad');
+    const addNumberManualButton = document.getElementById('add-number-manual');
+    const analyzeButton = document.getElementById('analyze-button');
+    const resetButton = document.getElementById('reset-button');
+    const enteredNumbersList = document.getElementById('entered-numbers-list');
+    const errorMessageDiv = document.getElementById('error-message');
+
+    // Results display elements
+    const hotNumbersResult = document.getElementById('hot-numbers-result');
+    const coldNumbersResult = document.getElementById('cold-numbers-result');
+    const frequencyTableBody = document.getElementById('frequency-table').querySelector('tbody');
+    const dozensResult = document.getElementById('dozens-result');
+    const columnsResult = document.getElementById('columns-result');
+    const colorsResult = document.getElementById('colors-result');
+    const evenOddResult = document.getElementById('even-odd-result');
+    const userGuidance = document.getElementById('user-guidance');
+
+    let enteredNumbers = [];
+    const MIN_NUMBERS_FOR_ANALYSIS = 50;
+
+    // --- Input Handling and Display ---
+
+    function displayError(message) {
+        errorMessageDiv.textContent = message;
+        errorMessageDiv.style.display = 'block';
+    }
+
+    function clearError() {
+        errorMessageDiv.textContent = '';
+        errorMessageDiv.style.display = 'none';
+    }
+
+    function displayUserGuidance(message, type = 'info') { // type can be 'info', 'warning', 'error'
+        const guidancePara = userGuidance.querySelector('p');
+        if (guidancePara) {
+            guidancePara.textContent = message;
+            guidancePara.className = type; // Apply class for styling
+        } else {
+             userGuidance.innerHTML = `<p class="${type}">${message}</p>`;
+        }
+    }
+
+    function updateEnteredNumbersDisplay() {
+        enteredNumbersList.textContent = enteredNumbers.join(', ') || '-';
+        if (enteredNumbers.length === 0) {
+            displayUserGuidance(`حداقل ${MIN_NUMBERS_FOR_ANALYSIS} شماره برای تحلیل مناسب نیاز است. لطفاً شماره وارد کنید.`);
+        } else if (enteredNumbers.length < MIN_NUMBERS_FOR_ANALYSIS) {
+            displayUserGuidance(`حداقل ${MIN_NUMBERS_FOR_ANALYSIS} شماره برای تحلیل مناسب نیاز است. تعداد فعلی: ${enteredNumbers.length}`, 'warning');
+        } else {
+            displayUserGuidance('تعداد شماره‌های وارد شده برای تحلیل کافی است. برای شروع، دکمه "شروع تحلیل" را بزنید.', 'info');
+        }
+    }
+
+    function addNumberToSequence(number) {
+        const num = parseInt(number); // Ensure it's a number
+        if (!isNaN(num) && num >= 0 && num <= 36) {
+            enteredNumbers.push(num);
+            updateEnteredNumbersDisplay();
+            clearError();
+        } else {
+            displayError(`شماره نامعتبر: ${number}. لطفاً عددی بین 0 تا 36 وارد کنید.`);
+        }
+    }
+
+    if (numberPad) {
+        numberPad.querySelectorAll('.num-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                addNumberToSequence(button.textContent);
+            });
+        });
+    }
+
+    if (addNumberManualButton) {
+        addNumberManualButton.addEventListener('click', () => {
+            clearError();
+            const inputText = numbersInput.value.trim();
+            if (inputText === '') {
+                displayError('لطفاً شماره‌ها را در فیلد متنی وارد کنید.');
+                return;
+            }
+            const numbersArrayStrings = inputText.split(',');
+            const tempNumbers = [];
+            let validInput = true;
+
+            for (const numStr of numbersArrayStrings) {
+                const num = parseInt(numStr.trim());
+                if (isNaN(num) || num < 0 || num > 36) {
+                    displayError(`ورودی نامعتبر: "${numStr.trim()}". همه شماره‌ها باید بین 0 تا 36 باشند.`);
+                    validInput = false;
+                    break;
+                }
+                tempNumbers.push(num);
+            }
+
+            if (validInput) {
+                tempNumbers.forEach(num => addNumberToSequence(num)); // Use the validated addNumberToSequence
+                numbersInput.value = '';
+            }
+        });
+    }
+
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            enteredNumbers = [];
+            updateEnteredNumbersDisplay();
+            clearError();
+            numbersInput.value = '';
+            hotNumbersResult.textContent = '-';
+            coldNumbersResult.textContent = '-';
+            frequencyTableBody.innerHTML = '';
+            dozensResult.textContent = '-';
+            columnsResult.textContent = '-';
+            colorsResult.textContent = '-';
+            evenOddResult.textContent = '-';
+            console.log('ورودی‌ها و نتایج پاک شدند.');
+        });
+    }
+
+    if (analyzeButton) {
+        analyzeButton.addEventListener('click', () => {
+            clearError();
+            if (enteredNumbers.length < MIN_NUMBERS_FOR_ANALYSIS) {
+                displayError(`برای شروع تحلیل، حداقل به ${MIN_NUMBERS_FOR_ANALYSIS} شماره نیاز است. شما ${enteredNumbers.length} شماره وارد کرده‌اید.`);
+                return;
+            }
+            console.log('شروع تحلیل با شماره‌های:', enteredNumbers);
+            runAnalysis();
+        });
+    }
+
+    // --- Analysis Functions ---
+    function runAnalysis() {
+        console.log('اجرای توابع تحلیل...');
+        const frequencies = calculateFrequencies(enteredNumbers);
+        displayFrequencyTable(frequencies);
+
+        const hot = getHotNumbers(frequencies, 3);
+        hotNumbersResult.textContent = hot.length > 0 ? hot.map(item => `${item.number} (${item.count} بار)`).join(', ') : 'اطلاعات کافی نیست';
+
+        const cold = getColdNumbers(frequencies, 3);
+        coldNumbersResult.textContent = cold.length > 0 ? cold.map(item => `${item.number} (${item.count} بار)`).join(', ') : 'همه اعداد حداقل یکبار آمده‌اند یا اطلاعات کافی نیست';
+
+        displayDozensAnalysis(analyzeDozens(enteredNumbers), enteredNumbers.length);
+        displayColumnsAnalysis(analyzeColumns(enteredNumbers), enteredNumbers.length);
+        displayColorsAnalysis(analyzeColors(enteredNumbers), enteredNumbers.length);
+        displayEvenOddAnalysis(analyzeEvenOdd(enteredNumbers), enteredNumbers.length);
+    }
+
+    function calculateFrequencies(numbers) {
+        const freq = new Array(37).fill(0);
+        numbers.forEach(num => {
+            if (num >= 0 && num <= 36) {
+                freq[num]++;
+            }
+        });
+        return freq;
+    }
+
+    function displayFrequencyTable(frequencies) {
+        frequencyTableBody.innerHTML = '';
+        if (!frequencies || frequencies.length === 0) {
+            const row = frequencyTableBody.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 2;
+            cell.textContent = 'داده‌ای برای نمایش وجود ندارد.';
+            return;
+        }
+        let hasData = false;
+        frequencies.forEach((count, number) => {
+            const row = frequencyTableBody.insertRow();
+            const numberCell = row.insertCell();
+            const countCell = row.insertCell();
+            numberCell.textContent = number;
+            countCell.textContent = count;
+            if (count > 0) hasData = true;
+        });
+        if (!hasData) {
+             frequencyTableBody.innerHTML = ''; // Clear again if only zeros
+             const row = frequencyTableBody.insertRow();
+             const cell = row.insertCell();
+             cell.colSpan = 2;
+             cell.textContent = 'هنوز شماره‌ای ثبت نشده یا تمام فراوانی‌ها صفر است.';
+        }
+    }
+
+    function getHotNumbers(frequencies, count) {
+        const numberCounts = frequencies.map((c, i) => ({ number: i, count: c }))
+            .filter(item => item.count > 0); // Only consider numbers that have appeared
+
+        numberCounts.sort((a, b) => {
+            if (b.count === a.count) { // If counts are equal, sort by number for stable sort (optional)
+                return a.number - b.number;
+            }
+            return b.count - a.count; // Sort by count descending
+        });
+        return numberCounts.slice(0, count);
+    }
+
+    function getColdNumbers(frequencies, count) {
+        const numberCounts = frequencies.map((c, i) => ({ number: i, count: c }));
+
+        numberCounts.sort((a, b) => {
+            if (a.count === b.count) { // If counts are equal
+                return a.number - b.number; // Sort by number (smaller numbers first for tie-breaking)
+            }
+            return a.count - b.count; // Sort by count ascending
+        });
+        // Filter out numbers that have appeared many times if we only want "truly cold" ones.
+        // For this definition, we take the least frequent, including those with 0 appearances.
+        return numberCounts.slice(0, count);
+    }
+
+    function formatPercentage(count, total) {
+        if (total === 0) return '0%';
+        return ((count / total) * 100).toFixed(1) + '%';
+    }
+
+    function analyzeDozens(numbers) {
+        const dozens = { '1st': 0, '2nd': 0, '3rd': 0, 'zero': 0 };
+        numbers.forEach(num => {
+            if (num === 0) dozens['zero']++;
+            else if (num >= 1 && num <= 12) dozens['1st']++;
+            else if (num >= 13 && num <= 24) dozens['2nd']++;
+            else if (num >= 25 && num <= 36) dozens['3rd']++;
+        });
+        return dozens;
+    }
+
+    function displayDozensAnalysis(dozenData, totalNumbers) {
+        let text = `دوجین اول (1-12): ${dozenData['1st']} بار (${formatPercentage(dozenData['1st'], totalNumbers)})`;
+        text += ` | دوجین دوم (13-24): ${dozenData['2nd']} بار (${formatPercentage(dozenData['2nd'], totalNumbers)})`;
+        text += ` | دوجین سوم (25-36): ${dozenData['3rd']} بار (${formatPercentage(dozenData['3rd'], totalNumbers)})`;
+        if(dozenData['zero'] > 0) {
+            text += ` | صفر: ${dozenData['zero']} بار (${formatPercentage(dozenData['zero'], totalNumbers)})`;
+        }
+        dozensResult.textContent = text;
+    }
+
+    function analyzeColumns(numbers) {
+        const columns = { '1st': 0, '2nd': 0, '3rd': 0, 'zero': 0 };
+        numbers.forEach(num => {
+            if (num === 0) {
+                columns['zero']++;
+                return;
+            }
+            if (num % 3 === 1) columns['1st']++; // 1, 4, ..., 34
+            else if (num % 3 === 2) columns['2nd']++; // 2, 5, ..., 35
+            else if (num % 3 === 0) columns['3rd']++; // 3, 6, ..., 36
+        });
+        return columns;
+    }
+
+    function displayColumnsAnalysis(columnData, totalNumbers) {
+        let text = `ستون اول: ${columnData['1st']} بار (${formatPercentage(columnData['1st'], totalNumbers)})`;
+        text += ` | ستون دوم: ${columnData['2nd']} بار (${formatPercentage(columnData['2nd'], totalNumbers)})`;
+        text += ` | ستون سوم: ${columnData['3rd']} بار (${formatPercentage(columnData['3rd'], totalNumbers)})`;
+         if(columnData['zero'] > 0) {
+            text += ` | صفر: ${columnData['zero']} بار (${formatPercentage(columnData['zero'], totalNumbers)})`;
+        }
+        columnsResult.textContent = text;
+    }
+
+    const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+    // Black numbers are not explicitly needed if we derive them, but good for clarity
+    // const blackNumbers = [2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35];
+
+    function analyzeColors(numbers) {
+        const colors = { 'red': 0, 'black': 0, 'green': 0 }; // Green for 0
+        numbers.forEach(num => {
+            if (num === 0) colors['green']++;
+            else if (redNumbers.includes(num)) colors['red']++;
+            else colors['black']++; // If not 0 and not red, it's black
+        });
+        return colors;
+    }
+
+    function displayColorsAnalysis(colorData, totalNumbers) {
+        let text = `قرمز: ${colorData.red} بار (${formatPercentage(colorData.red, totalNumbers)})`;
+        text += ` | سیاه: ${colorData.black} بار (${formatPercentage(colorData.black, totalNumbers)})`;
+        text += ` | سبز (0): ${colorData.green} بار (${formatPercentage(colorData.green, totalNumbers)})`;
+        colorsResult.textContent = text;
+    }
+
+    function analyzeEvenOdd(numbers) {
+        const evenOdd = { 'even': 0, 'odd': 0, 'zero': 0 };
+        numbers.forEach(num => {
+            if (num === 0) {
+                evenOdd['zero']++; // Count zero separately
+                return;
+            }
+            if (num % 2 === 0) evenOdd['even']++;
+            else evenOdd['odd']++;
+        });
+        return evenOdd;
+    }
+
+    function displayEvenOddAnalysis(evenOddData, totalNumbers) {
+        let text = `زوج: ${evenOddData.even} بار (${formatPercentage(evenOddData.even, totalNumbers)})`;
+        text += ` | فرد: ${evenOddData.odd} بار (${formatPercentage(evenOddData.odd, totalNumbers)})`;
+        if(evenOddData['zero'] > 0) {
+             text += ` | صفر: ${evenOddData.zero} بار (${formatPercentage(evenOddData.zero, totalNumbers)})`;
+        }
+        evenOddResult.textContent = text;
+    }
+
+    // Initial setup
+    updateEnteredNumbersDisplay();
+
+}); // End DOMContentLoaded
+    </script>
 </body>
 </html>
