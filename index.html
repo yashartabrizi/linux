@@ -328,13 +328,63 @@
             }
 
             async function fetchLLMResponse(userMessage) {
-                // Simulate API call delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                // In a real scenario, here you would make an API call to an LLM
-                // For example: const response = await fetch('/api/llm', { method: 'POST', body: JSON.stringify({ message: userMessage }) });
-                // const data = await response.json();
-                // return data.reply;
-                return "این یک پاسخ شبیه‌سازی شده از مدل زبان بزرگ است.";
+                const llmApiUrl = 'YOUR_LLM_ENDPOINT_URL'; // Placeholder for the LLM API endpoint
+                const apiKey = 'YOUR_API_KEY'; // IMPORTANT: Replace with your actual API key AND handle it securely (e.g., via a backend proxy) for production.
+
+                // Note: The structure of the request (headers, body) is highly dependent on the specific LLM provider.
+                // The following is a generic example and might need significant adjustment.
+
+                try {
+                    const response = await fetch(llmApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // Most APIs require an Authorization header.
+                            // Example: 'Authorization': `Bearer ${apiKey}`
+                            // Some might require the key in a different header like 'X-API-Key': apiKey
+                            // Ensure you use the correct scheme for your chosen LLM provider.
+                            // Storing API keys directly in client-side code is insecure for production.
+                            // Consider this line commented out unless you understand the security risks for your specific (development/testing) use case.
+                            // 'Authorization': `Bearer ${apiKey}`,
+                        },
+                        body: JSON.stringify({
+                            // The request body structure varies greatly between LLM providers.
+                            // This is a common pattern, but you MUST consult your LLM's API documentation.
+                            prompt: userMessage, // For some models like older OpenAI text completion
+                            // messages: [{ role: "user", content: userMessage }], // For chat completion models (OpenAI, Gemini, etc.)
+                            max_tokens: 150, // Example parameter to limit response length
+                            // model: "text-davinci-003" // Example model name, if required by the API
+                        })
+                    });
+
+                    if (!response.ok) {
+                        // Handle HTTP errors (e.g., 4xx, 5xx status codes)
+                        console.error(`API request failed with status: ${response.status} ${response.statusText}`);
+                        // You might want to parse response.json() here if the API sends error details in the body
+                        // const errorData = await response.json();
+                        // console.error('Error details:', errorData);
+                        return "متاسفانه در پردازش درخواست شما خطایی رخ داد. (کد خطا: " + response.status + ")";
+                    }
+
+                    const responseData = await response.json();
+
+                    // Extracting the actual text response also varies. Consult your LLM's API documentation.
+                    // Example for some OpenAI models:
+                    // const botText = responseData.choices[0].message.content.trim();
+                    // Example for some older OpenAI models:
+                    // const botText = responseData.choices[0].text.trim();
+                    // Example for Google Gemini:
+                    // const botText = responseData.candidates[0].content.parts[0].text.trim();
+
+                    // Using a generic placeholder for extraction - REPLACE THIS with actual logic for your LLM
+                    const botText = responseData.reply || (responseData.choices && responseData.choices[0].text) || (responseData.choices && responseData.choices[0].message && responseData.choices[0].message.content) || (responseData.candidates && responseData.candidates[0].content.parts[0].text) || "پاسخی از سرویس دریافت نشد.";
+
+                    return botText.trim();
+
+                } catch (error) {
+                    console.error('خطا در ارتباط با سرویس LLM:', error);
+                    return "متاسفانه مشکلی در ارتباط با سرویس پیش آمده است. لطفاً بعداً تلاش کنید.";
+                }
             }
 
             function toggleTheme() {
