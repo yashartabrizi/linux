@@ -3,529 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پیشنهادگر شماره رولت اروپایی</title>
+    <title>ربات هوشمند همدم</title>
     <style>
-/* Basic Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+        :root {
+            --primary-color: #4a6bff;
+            --dark-color: #1a1a2e;
+            --light-color: #f5f5f5;
+            --user-msg-bg: #e3f2fd;
+            --bot-msg-bg: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
 
-body {
-    font-family: 'Tahoma', 'Helvetica Neue', Arial, sans-serif; /* Common Persian-friendly fonts */
-    line-height: 1.6;
-    background-color: #f4f4f4;
-    color: #333;
-    direction: rtl; /* Right-to-left for Persian */
-    padding: 20px;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-.container {
-    max-width: 900px;
-    margin: auto;
-    background: #fff;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.1);
-}
+        body {
+            background-color: var(--light-color);
+            color: #333;
+            transition: all 0.3s ease;
+        }
 
-h1, h2, h3 {
-    color: #333;
-    margin-bottom: 0.75em;
-    text-align: center;
-}
+        body.dark-mode {
+            background-color: var(--dark-color);
+            color: #f5f5f5;
+            --bot-msg-bg: #16213e;
+            --user-msg-bg: #0f3460;
+            --light-color: #1a1a2e;
+        }
 
-h1 {
-    font-size: 2em;
-    color: #2c3e50; /* Dark blue */
-}
+        .chat-container {
+            max-width: 800px;
+            margin: 20px auto;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            background-color: white;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-h2 {
-    font-size: 1.5em;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.5em;
-    margin-top: 20px;
-}
+        .dark-mode .chat-container {
+            background-color: #16213e;
+        }
 
-h3 {
-    font-size: 1.2em;
-    color: #2980b9; /* Blue */
-}
+        .chat-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-/* Input Section */
-.input-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background-color: #ecf0f1;
-    border-radius: 5px;
-}
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: var(--light-color);
+        }
 
-.input-section label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-}
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
 
-.input-section input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
-}
+        .message-user {
+            align-items: flex-end;
+        }
 
-.number-pad-container {
-    margin-bottom: 15px;
-}
+        .message-bot {
+            align-items: flex-start;
+        }
 
-.number-pad-container p {
-    margin-bottom: 10px;
-}
+        .message-content {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-top: 5px;
+            position: relative;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
 
-#number-pad {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
-    gap: 5px;
-    margin-bottom: 15px;
-}
+        .user-message .message-content {
+            background-color: var(--user-msg-bg);
+            color: #333;
+            border-bottom-right-radius: 0;
+        }
 
-.num-btn {
-    padding: 10px;
-    font-size: 1em;
-    background-color: #3498db; /* Blue */
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
+        .dark-mode .user-message .message-content {
+            color: #f5f5f5;
+        }
 
-.num-btn:hover {
-    background-color: #2980b9; /* Darker blue */
-}
+        .bot-message .message-content {
+            background-color: var(--bot-msg-bg);
+            border-bottom-left-radius: 0;
+            box-shadow: var(--shadow);
+        }
 
-.num-btn:nth-child(1) { /* Style for 0 */
-    background-color: #2ecc71; /* Green */
-}
-.num-btn:nth-child(1):hover {
-    background-color: #27ae60; /* Darker Green */
-}
+        .message-time {
+            font-size: 0.7rem;
+            color: #777;
+            margin-top: 3px;
+        }
 
+        .dark-mode .message-time {
+            color: #aaa;
+        }
 
-.entered-numbers-display {
-    margin-bottom: 20px;
-    padding: 10px;
-    background-color: #e9ecef;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    min-height: 30px;
-}
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            background-color: white;
+            border-top: 1px solid #eee;
+        }
 
-#entered-numbers-list {
-    font-weight: bold;
-    color: #495057;
-}
+        .dark-mode .chat-input {
+            background-color: #16213e;
+            border-top: 1px solid #0f3460;
+        }
 
-button {
-    display: inline-block;
-    background-color: #2c3e50; /* Dark blue/grey */
-    color: white;
-    padding: 10px 18px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1em;
-    margin: 5px;
-    transition: background-color 0.3s ease;
-}
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
 
-button:hover {
-    background-color: #34495e; /* Slightly lighter dark blue/grey */
-}
+        .dark-mode #user-input {
+            background-color: #0f3460;
+            color: white;
+            border: 1px solid #4a6bff;
+        }
 
-#analyze-button {
-    background-color: #27ae60; /* Green */
-}
-#analyze-button:hover {
-    background-color: #229954; /* Darker Green */
-}
+        #user-input:focus {
+            border-color: var(--primary-color);
+        }
 
-#reset-button {
-    background-color: #e74c3c; /* Red */
-}
-#reset-button:hover {
-    background-color: #c0392b; /* Darker Red */
-}
+        #send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            margin-right: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+        }
 
-/* Results Section */
-.results-section {
-    margin-top: 20px;
-}
+        #send-button:hover {
+            background-color: #3a5af0;
+            transform: scale(1.05);
+        }
 
-.analysis-block {
-    background: #f9f9f9;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 5px;
-    border: 1px solid #eee;
-}
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
 
-.analysis-block h3 {
-    margin-top: 0;
-}
+        .typing-indicator {
+            display: none;
+            padding: 10px 15px;
+            background-color: var(--bot-msg-bg);
+            border-radius: 18px;
+            border-bottom-left-radius: 0;
+            box-shadow: var(--shadow);
+            margin-bottom: 15px;
+            width: fit-content;
+        }
 
-.error {
-    color: #c0392b; /* Red */
-    background-color: #fdd;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    border: 1px solid #c0392b;
-    text-align: center;
-}
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #777;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: typing 1s infinite ease-in-out;
+        }
 
-#user-guidance p { /* This will be overridden by .guidance-box p styles if #user-guidance also has .guidance-box class */
-    font-style: italic;
-    color: #555;
-    background-color: #eef;
-    padding: 10px;
-    border-radius: 4px;
-    border-left: 3px solid #3498db;
-}
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
 
-/* Basic Responsive */
-@media (max-width: 600px) {
-    .container {
-        padding: 15px;
-    }
-    h1 {
-        font-size: 1.8em;
-    }
-    #number-pad {
-        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-    }
-    button, .num-btn {
-        font-size: 0.9em;
-        padding: 8px 12px;
-    }
-}
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
 
-/* Append to existing style.css */
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
 
-/* Tooltip icon styling */
-.tooltip-trigger {
-    font-size: 0.8em;
-    color: #3498db; /* Blue, matches other link-like elements */
-    cursor: help;
-    margin-right: 5px; /* In RTL, this is margin-left effectively */
-    border: 1px solid #ddd;
-    border-radius: 50%;
-    padding: 0px 4px;
-    display: inline-block;
-    line-height: 1;
-}
+        @media (max-width: 600px) {
+            .chat-container {
+                margin: 0;
+                height: 100vh;
+                border-radius: 0;
+            }
 
-/* Guidance box styling */
-.guidance-box {
-    background-color: #eaf2f8; /* Light blue */
-    border-left: 4px solid #3498db; /* Blue accent */
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.guidance-box p {
-    margin: 0;
-    font-style: italic;
-    color: #2c3e50; /* Darker blue text for readability */
-    /* Resetting properties from the potentially conflicting #user-guidance p */
-    background-color: transparent;
-    border-left: none;
-    padding: 0;
-}
-
-/* For warning/error states in guidance (if script.js applies these classes) */
-.guidance-box p.warning {
-    /* These will apply if script.js adds 'warning' class to the <p> inside .guidance-box */
-    color: #c27d0a; /* Darker orange for text */
-    background-color: #fef9e7; /* Light yellow background */
-    border-left: 4px solid #f39c12 !important; /* Orange accent, !important to override .guidance-box border if needed */
-    padding: 10px; /* Add padding back for these specific states */
-}
-
-.guidance-box p.error {
-    /* These will apply if script.js adds 'error' class to the <p> inside .guidance-box */
-    color: #c0392b; /* Red for text */
-    background-color: #fdedec; /* Light red background */
-    border-left: 4px solid #e74c3c !important; /* Red accent, !important to override .guidance-box border if needed */
-    padding: 10px; /* Add padding back for these specific states */
-}
-
-/* Ensure the error message div style is consistent */
-#error-message.error { /* This is already defined, but ensure consistency or enhance if needed */
-    color: #c0392b;
-    background-color: #fdd;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    border: 1px solid #c0392b;
-    text-align: center;
-}
+            .message-content {
+                max-width: 85%;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>تحلیلگر پیشرفته رولت</h1>
-
-        <div class="input-section">
-            <h2>ورود اطلاعات</h2>
-            <div>
-                <label for="numbers-input">شماره‌ها را وارد کنید (جدا شده با کاما):</label>
-                <input type="text" id="numbers-input" placeholder="مثلاً: 10,0,23,5,16">
-            </div>
-            <div class="number-pad-container">
-                <p><strong>یا با کلیک وارد کنید:</strong></p>
-                <div id="number-pad">
-                    <button class="num-btn">0</button>
-                    <button class="num-btn">1</button>
-                    <button class="num-btn">2</button>
-                    <button class="num-btn">3</button>
-                    <button class="num-btn">4</button>
-                    <button class="num-btn">5</button>
-                    <button class="num-btn">6</button>
-                    <button class="num-btn">7</button>
-                    <button class="num-btn">8</button>
-                    <button class="num-btn">9</button>
-                    <button class="num-btn">10</button>
-                    <button class="num-btn">11</button>
-                    <button class="num-btn">12</button>
-                    <button class="num-btn">13</button>
-                    <button class="num-btn">14</button>
-                    <button class="num-btn">15</button>
-                    <button class="num-btn">16</button>
-                    <button class="num-btn">17</button>
-                    <button class="num-btn">18</button>
-                    <button class="num-btn">19</button>
-                    <button class="num-btn">20</button>
-                    <button class="num-btn">21</button>
-                    <button class="num-btn">22</button>
-                    <button class="num-btn">23</button>
-                    <button class="num-btn">24</button>
-                    <button class="num-btn">25</button>
-                    <button class="num-btn">26</button>
-                    <button class="num-btn">27</button>
-                    <button class="num-btn">28</button>
-                    <button class="num-btn">29</button>
-                    <button class="num-btn">30</button>
-                    <button class="num-btn">31</button>
-                    <button class="num-btn">32</button>
-                    <button class="num-btn">33</button>
-                    <button class="num-btn">34</button>
-                    <button class="num-btn">35</button>
-                    <button class="num-btn">36</button>
-                </div>
-            </div>
-            <div class="entered-numbers-display">
-                <strong>شماره‌های وارد شده: </strong><span id="entered-numbers-list">-</span>
-            </div>
-            <button id="add-number-manual">افزودن از متن</button>
-            <button id="analyze-button">شروع تحلیل</button>
-            <button id="reset-button">بازنشانی</button>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>ربات هوشمند همدم</h2>
+            <button class="theme-toggle" id="theme-toggle">🌓</button>
         </div>
 
-        <div class="results-section">
-            <h2>نتایج تحلیل</h2>
-            <div id="error-message" class="error" style="display:none;"></div>
-
-            <div id="user-guidance" class="guidance-box">
-                <p>حداقل ۵۰ شماره برای تحلیل مناسب نیاز است. این ابزار صرفاً برای تحلیل آماری و سرگرمی طراحی شده است و به هیچ عنوان برنده‌ شدن یا پیش‌بینی قطعی نتایج در بازی رولت را تضمین نمی‌کند. رولت یک بازی شانسی است.</p>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                <div class="message-content">
+                    سلام! من ربات هوشمند شما هستم. چگونه می‌توانم به شما کمک کنم؟
+                </div>
+                <div class="message-time" id="welcome-time"></div>
             </div>
+        </div>
 
-            <div class="analysis-block">
-                <h3>چهار شماره پیشنهادی <span class="tooltip-trigger" title="این اعداد بر اساس اینکه چه مدت از آخرین مشاهده آن‌ها گذشته است (اعداد دیرکرده) پیشنهاد می‌شوند و هیچ تضمینی برای موفقیت ندارند.">&#9432;</span></h3>
-                <p id="prediction-result" style="font-size: 1.5em; text-align: center; font-weight: bold;">-</p>
-            </div>
+        <div class="typing-indicator" id="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="پیام خود را بنویسید..." autofocus>
+            <button id="send-button">➤</button>
         </div>
     </div>
+
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
-    const numbersInput = document.getElementById('numbers-input');
-    const numberPad = document.getElementById('number-pad');
-    const addNumberManualButton = document.getElementById('add-number-manual');
-    const analyzeButton = document.getElementById('analyze-button');
-    const resetButton = document.getElementById('reset-button');
-    const enteredNumbersList = document.getElementById('entered-numbers-list');
-    const errorMessageDiv = document.getElementById('error-message');
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+            const typingIndicator = document.getElementById('typing-indicator');
+            const themeToggle = document.getElementById('theme-toggle');
 
-    // Results display elements
-    const userGuidance = document.getElementById('user-guidance');
-    const predictionResult = document.getElementById('prediction-result');
+            document.getElementById('welcome-time').textContent = getCurrentTime();
 
-    let enteredNumbers = [];
-    const MIN_NUMBERS_FOR_ANALYSIS = 50;
+            themeToggle.addEventListener('click', toggleTheme);
 
-    // --- Input Handling and Display ---
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.body.classList.add('dark-mode');
+            }
 
-    function displayError(message) {
-        errorMessageDiv.textContent = message;
-        errorMessageDiv.style.display = 'block';
-    }
+            sendButton.addEventListener('click', sendMessage);
 
-    function clearError() {
-        errorMessageDiv.textContent = '';
-        errorMessageDiv.style.display = 'none';
-    }
-
-    function displayUserGuidance(message, type = 'info') { // type can be 'info', 'warning', 'error'
-        const guidancePara = userGuidance.querySelector('p');
-        if (guidancePara) {
-            guidancePara.textContent = message;
-            guidancePara.className = type; // Apply class for styling
-        } else {
-             userGuidance.innerHTML = `<p class="${type}">${message}</p>`;
-        }
-    }
-
-    function updateEnteredNumbersDisplay() {
-        enteredNumbersList.textContent = enteredNumbers.join(', ') || '-';
-        if (enteredNumbers.length === 0) {
-            displayUserGuidance(`حداقل ${MIN_NUMBERS_FOR_ANALYSIS} شماره برای تحلیل مناسب نیاز است. لطفاً شماره وارد کنید.`);
-        } else if (enteredNumbers.length < MIN_NUMBERS_FOR_ANALYSIS) {
-            displayUserGuidance(`حداقل ${MIN_NUMBERS_FOR_ANALYSIS} شماره برای تحلیل مناسب نیاز است. تعداد فعلی: ${enteredNumbers.length}`, 'warning');
-        } else {
-            displayUserGuidance('تعداد شماره‌های وارد شده برای تحلیل کافی است. برای شروع، دکمه "شروع تحلیل" را بزنید.', 'info');
-        }
-    }
-
-    function addNumberToSequence(number) {
-        const num = parseInt(number); // Ensure it's a number
-        if (!isNaN(num) && num >= 0 && num <= 36) {
-            enteredNumbers.push(num);
-            updateEnteredNumbersDisplay();
-            clearError();
-        } else {
-            displayError(`شماره نامعتبر: ${number}. لطفاً عددی بین 0 تا 36 وارد کنید.`);
-        }
-    }
-
-    if (numberPad) {
-        numberPad.querySelectorAll('.num-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                addNumberToSequence(button.textContent);
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
             });
+
+            async function sendMessage() { // Added async here as per original instruction for context, not part of this subtask's direct change.
+                const message = userInput.value.trim();
+                if (message === '') return;
+
+                addMessage(message, 'user');
+                userInput.value = '';
+
+                typingIndicator.style.display = 'block';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Call generateResponse and wait for the result
+                const botResponse = await generateResponse(message);
+
+                // Add the bot's message to the chat
+                addMessage(botResponse, 'bot');
+
+                // Hide typing indicator AFTER message is added
+                typingIndicator.style.display = 'none';
+                chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll again after bot message
+            }
+
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = text;
+
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'message-time';
+                timeDiv.textContent = getCurrentTime();
+
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(timeDiv);
+
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function getCurrentTime() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+            }
+
+            async function generateResponse(userMessage) { // This function IS THE TARGET of this subtask
+                return await fetchLLMResponse(userMessage);
+            }
+
+            async function fetchLLMResponse(userMessage) {
+                // Simulate API call delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                // In a real scenario, here you would make an API call to an LLM
+                // For example: const response = await fetch('/api/llm', { method: 'POST', body: JSON.stringify({ message: userMessage }) });
+                // const data = await response.json();
+                // return data.reply;
+                return "این یک پاسخ شبیه‌سازی شده از مدل زبان بزرگ است.";
+            }
+
+            function toggleTheme() {
+                document.body.classList.toggle('dark-mode');
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
+            }
         });
-    }
-
-    if (addNumberManualButton) {
-        addNumberManualButton.addEventListener('click', () => {
-            clearError();
-            const inputText = numbersInput.value.trim();
-            if (inputText === '') {
-                displayError('لطفاً شماره‌ها را در فیلد متنی وارد کنید.');
-                return;
-            }
-            const numbersArrayStrings = inputText.split(',');
-            const tempNumbers = [];
-            let validInput = true;
-
-            for (const numStr of numbersArrayStrings) {
-                const num = parseInt(numStr.trim());
-                if (isNaN(num) || num < 0 || num > 36) {
-                    displayError(`ورودی نامعتبر: "${numStr.trim()}". همه شماره‌ها باید بین 0 تا 36 باشند.`);
-                    validInput = false;
-                    break;
-                }
-                tempNumbers.push(num);
-            }
-
-            if (validInput) {
-                tempNumbers.forEach(num => addNumberToSequence(num)); // Use the validated addNumberToSequence
-                numbersInput.value = '';
-            }
-        });
-    }
-
-    if (resetButton) {
-        resetButton.addEventListener('click', () => {
-            enteredNumbers = [];
-            updateEnteredNumbersDisplay();
-            clearError();
-            numbersInput.value = '';
-            // Clear previous results
-            if(predictionResult) predictionResult.textContent = '-';
-            console.log('ورودی‌ها و نتایج پاک شدند.');
-        });
-    }
-
-    if (analyzeButton) {
-        analyzeButton.addEventListener('click', () => {
-            clearError();
-            if (enteredNumbers.length < MIN_NUMBERS_FOR_ANALYSIS) {
-                displayError(`برای شروع تحلیل، حداقل به ${MIN_NUMBERS_FOR_ANALYSIS} شماره نیاز است. شما ${enteredNumbers.length} شماره وارد کرده‌اید.`);
-                return;
-            }
-            runAnalysis();
-        });
-    }
-
-    // --- Analysis Functions ---
-    function runAnalysis() {
-        console.log('اجرای تحلیل برای پیشنهاد اعداد...');
-        // const frequencies = calculateFrequencies(enteredNumbers); // No longer needed for overdue
-        const suggestedNumbers = getOverdueNumbers(enteredNumbers, 4); // Get top 4 overdue numbers
-        displayPrediction(suggestedNumbers);
-    }
-
-    function displayPrediction(suggestedNumbers) {
-        if (suggestedNumbers && suggestedNumbers.length > 0) {
-            // suggestedNumbers is an array of objects: { number: X, detail: Y (spinsSinceLastSeen) }
-            predictionResult.textContent = suggestedNumbers.map(item => item.number).join(' - ');
-        } else {
-            predictionResult.textContent = 'اطلاعات کافی برای پیشنهاد وجود ندارد.';
-        }
-    }
-
-    function getOverdueNumbers(numbersHistory, count) {
-        if (!numbersHistory || numbersHistory.length === 0) {
-            return [];
-        }
-        const overdueScores = [];
-        for (let i = 0; i <= 36; i++) { // For numbers 0-36
-            let lastIndex = -1;
-            for (let j = numbersHistory.length - 1; j >= 0; j--) {
-                if (numbersHistory[j] === i) {
-                    lastIndex = j;
-                    break;
-                }
-            }
-
-            let spinsSinceLastSeen;
-            if (lastIndex === -1) {
-                spinsSinceLastSeen = numbersHistory.length; // Appeared 0 times in the current history
-            } else {
-                spinsSinceLastSeen = numbersHistory.length - 1 - lastIndex;
-            }
-            overdueScores.push({ number: i, spins: spinsSinceLastSeen });
-        }
-
-        // Sort by spinsSinceLastSeen (descending), then by number (ascending) for tie-breaking
-        overdueScores.sort((a, b) => {
-            if (b.spins === a.spins) {
-                return a.number - b.number;
-            }
-            return b.spins - a.spins;
-        });
-
-        return overdueScores.slice(0, count).map(item => ({ number: item.number, detail: item.spins })); // Keep detail for potential future display
-    }
-
-    // Initial setup
-    updateEnteredNumbersDisplay();
-
-}); // End DOMContentLoaded
     </script>
 </body>
 </html>
