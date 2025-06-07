@@ -277,7 +277,7 @@ button:hover {
 </head>
 <body>
     <div class="container">
-        <h1>پیشنهادگر شماره رولت اروپایی</h1>
+        <h1>تحلیلگر پیشرفته رولت</h1>
 
         <div class="input-section">
             <h2>ورود اطلاعات</h2>
@@ -344,7 +344,7 @@ button:hover {
             </div>
 
             <div class="analysis-block">
-                <h3>چهار شماره پیشنهادی <span class="tooltip-trigger" title="این اعداد بر اساس بیشترین تکرار در داده‌های وارد شده پیشنهاد می‌شوند و هیچ تضمینی برای موفقیت ندارند.">&#9432;</span></h3>
+                <h3>چهار شماره پیشنهادی <span class="tooltip-trigger" title="این اعداد بر اساس اینکه چه مدت از آخرین مشاهده آن‌ها گذشته است (اعداد دیرکرده) پیشنهاد می‌شوند و هیچ تضمینی برای موفقیت ندارند.">&#9432;</span></h3>
                 <p id="prediction-result" style="font-size: 1.5em; text-align: center; font-weight: bold;">-</p>
             </div>
         </div>
@@ -474,41 +474,52 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Analysis Functions ---
     function runAnalysis() {
         console.log('اجرای تحلیل برای پیشنهاد اعداد...');
-        const frequencies = calculateFrequencies(enteredNumbers);
-        const suggestedNumbers = getHotNumbers(frequencies, 4); // Get top 4 hot numbers
+        // const frequencies = calculateFrequencies(enteredNumbers); // No longer needed for overdue
+        const suggestedNumbers = getOverdueNumbers(enteredNumbers, 4); // Get top 4 overdue numbers
         displayPrediction(suggestedNumbers);
     }
 
     function displayPrediction(suggestedNumbers) {
         if (suggestedNumbers && suggestedNumbers.length > 0) {
-            // suggestedNumbers from getHotNumbers is an array of objects: { number: X, count: Y }
+            // suggestedNumbers is an array of objects: { number: X, detail: Y (spinsSinceLastSeen) }
             predictionResult.textContent = suggestedNumbers.map(item => item.number).join(' - ');
         } else {
             predictionResult.textContent = 'اطلاعات کافی برای پیشنهاد وجود ندارد.';
         }
     }
 
-    function calculateFrequencies(numbers) {
-        const freq = new Array(37).fill(0);
-        numbers.forEach(num => {
-            if (num >= 0 && num <= 36) {
-                freq[num]++;
+    function getOverdueNumbers(numbersHistory, count) {
+        if (!numbersHistory || numbersHistory.length === 0) {
+            return [];
+        }
+        const overdueScores = [];
+        for (let i = 0; i <= 36; i++) { // For numbers 0-36
+            let lastIndex = -1;
+            for (let j = numbersHistory.length - 1; j >= 0; j--) {
+                if (numbersHistory[j] === i) {
+                    lastIndex = j;
+                    break;
+                }
             }
-        });
-        return freq;
-    }
 
-    function getHotNumbers(frequencies, count) {
-        const numberCounts = frequencies.map((c, i) => ({ number: i, count: c }))
-            .filter(item => item.count > 0); // Only consider numbers that have appeared
+            let spinsSinceLastSeen;
+            if (lastIndex === -1) {
+                spinsSinceLastSeen = numbersHistory.length; // Appeared 0 times in the current history
+            } else {
+                spinsSinceLastSeen = numbersHistory.length - 1 - lastIndex;
+            }
+            overdueScores.push({ number: i, spins: spinsSinceLastSeen });
+        }
 
-        numberCounts.sort((a, b) => {
-            if (b.count === a.count) { // If counts are equal, sort by number for stable sort (optional)
+        // Sort by spinsSinceLastSeen (descending), then by number (ascending) for tie-breaking
+        overdueScores.sort((a, b) => {
+            if (b.spins === a.spins) {
                 return a.number - b.number;
             }
-            return b.count - a.count; // Sort by count descending
+            return b.spins - a.spins;
         });
-        return numberCounts.slice(0, count);
+
+        return overdueScores.slice(0, count).map(item => ({ number: item.number, detail: item.spins })); // Keep detail for potential future display
     }
 
     // Initial setup
