@@ -1,0 +1,801 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پیش‌بینی‌کننده رولت هوشمند</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            font-family: 'Vazir', 'Arial', sans-serif;
+            color: white;
+            overflow: hidden;
+            direction: rtl;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 15px;
+            pointer-events: auto;
+            margin: 10px; /* کاهش حاشیه برای فضای بیشتر */
+            box-sizing: border-box;
+        }
+        .prediction-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 280px;
+            color: #00ffff;
+            max-height: 350px; /* محدود کردن ارتفاع */
+            overflow-y: auto; /* اسکرول در صورت نیاز */
+            z-index: 12; /* بالاتر از تاریخچه */
+        }
+        .controls-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #ffaa00;
+            border-color: #ffaa00;
+            z-index: 10; /* پایین‌تر از بقیه */
+        }
+        .history-panel {
+            position: absolute;
+            top: 400px; /* افزایش فاصله از بالا */
+            right: 20px;
+            width: 280px;
+            color: #ff00ff;
+            border-color: #ff00ff;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 11; /* بین پیش‌بینی و کنترل */
+        }
+        button, input[type="text"] {
+            background: rgba(0, 100, 120, 0.5);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 5px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover, input[type="text"]:hover {
+            background: rgba(0, 255, 255, 0.2);
+        }
+        .confidence-meter {
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        .confidence-level {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+            width: 0;
+            transition: width 0.5s ease;
+        }
+        #roulette-container {
+            width: 100%;
+            height: 100vh;
+        }
+        .number-red { color: #ff5555; }
+        .number-black { color: #dddddd; }
+        .number-green { color: #55ff55; }
+        .live-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        input[type="text"] {
+            width: 150px;
+            text-align: right;
+        }
+        .chart-container {
+            margin-top: 10px;
+        }
+        #color-chart, #hot-numbers-chart {
+            width: 260px;
+            height: 150px;
+        }
+        .error-message, .warning-message {
+            color: #ff5555;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .predicted-numbers {
+            color: #ffffff; /* سفید برای شماره‌های پیش‌بینی‌شده */
+        }
+        /* ریسپانسیو برای صفحه‌های کوچک */
+        @media (max-width: 600px) {
+            .prediction-panel, .history-panel {
+                width: 90%;
+                right: 5%;
+                left: 5%;
+            }
+            .history-panel {
+                top: 450px; /* فاصله بیشتر در موبایل */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="roulette-container"></div>
+    
+    <div id="ui-overlay">
+        <div class="panel prediction-panel">
+            <h3>پیش‌بینی هوشمند</h3>
+            <div>اطمینان: <span id="confidence">0٪</span></div>
+            <div class="confidence-meter">
+                <div class="confidence-level" id="confidence-bar"></div>
+            </div>
+            <div>بهترین پیش‌بینی‌ها: <span id="predicted-numbers" class="predicted-numbers">--</span></div>
+            <div>رنگ پیش‌بینی‌شده: <span id="predicted-color">--</span></div>
+            <div>امتیاز الگو: <span id="pattern-score">--</span></div>
+            <div>احتمال قرمز/سیاه: <span id="color-prob">--</span></div>
+            <div>احتمال زوج/فرد: <span id="even-odd-prob">--</span></div>
+            <div>شرط گروهی: <span id="group-bet">--</span></div>
+            <div>اعداد داغ: <span id="hot-numbers">--</span></div>
+            <div>اعداد سرد: <span id="cold-numbers">--</span></div>
+            <div class="chart-container">
+                <canvas id="color-chart"></canvas>
+                <canvas id="hot-numbers-chart"></canvas>
+            </div>
+        </div>
+        <div class="panel history-panel">
+            <h3>تاریخچه چرخش‌ها</h3>
+            <div id="history-list"></div>
+        </div>
+        <div class="panel controls-panel">
+            <h4>کنترل‌ها</h4>
+            <div class="live-input">
+                <input type="text" id="live-input" placeholder="چرخش‌های زنده (مثال: ۵,۱۲,۰)">
+                <button id="submit-live-btn">ارسال</button>
+            </div>
+            <div class="error-message" id="error-message"></div>
+            <div class="warning-message" id="warning-message"></div>
+            <button id="spin-btn">چرخش</button>
+            <button id="analyze-btn">تحلیل</button>
+            <button id="reset-btn">بازنشانی</button>
+            <button id="save-strategy-btn">ذخیره استراتژی</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <script>
+        class PredictionEngine {
+            constructor() {
+                this.initializeData();
+                this.streakCounter = { red: 0, black: 0, green: 0 };
+                this.lossStreak = 0;
+                this.wheelLayout = [
+                    0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36,
+                    11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9,
+                    22, 18, 29, 7, 28, 12, 35, 3, 26
+                ];
+                this.dozens = [
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // دوجین اول
+                    [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], // دوجین دوم
+                    [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36] // دوجین سوم
+                ];
+            }
+
+            initializeData() {
+                try {
+                    this.spinHistory = JSON.parse(localStorage.getItem('spinHistory')) || [];
+                    this.hotNumbers = new Map(JSON.parse(localStorage.getItem('hotNumbers')) || []);
+                    this.strategyHistory = JSON.parse(localStorage.getItem('strategyHistory')) || [];
+                    this.spinHistory = this.spinHistory.filter(num => Number.isInteger(num) && num >= 0 && num <= 36);
+                    this.hotNumbers = new Map([...this.hotNumbers].filter(([num]) => Number.isInteger(num) && num >= 0 && num <= 36));
+                    this.saveData();
+                } catch (e) {
+                    console.error("داده‌های ذخیره‌شده نامعتبر، بازنشانی...");
+                    this.spinHistory = [];
+                    this.hotNumbers = new Map();
+                    this.strategyHistory = [];
+                    localStorage.removeItem('spinHistory');
+                    localStorage.removeItem('hotNumbers');
+                    localStorage.removeItem('strategyHistory');
+                }
+            }
+
+            getColor(number) {
+                if (number === 0) return 'سبز';
+                const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+                return redNumbers.includes(number) ? 'قرمز' : 'سیاه';
+            }
+
+            isEven(number) {
+                return number !== 0 && number % 2 === 0;
+            }
+
+            getDozen(number) {
+                if (number === 0) return null;
+                for (let i = 0; i < this.dozens.length; i++) {
+                    if (this.dozens[i].includes(number)) return i + 1;
+                }
+                return null;
+            }
+
+            analyzeSpin(spinResult, predictedNumbers = []) {
+                if (!Number.isInteger(spinResult) || spinResult < 0 || spinResult > 36) {
+                    throw new Error(`چرخش نامعتبر: ${spinResult} باید عدد صحیح بین ۰ تا ۳۶ باشد.`);
+                }
+
+                if (predictedNumbers.length > 0 && !predictedNumbers.includes(spinResult)) {
+                    this.lossStreak++;
+                } else {
+                    this.lossStreak = 0;
+                }
+
+                this.spinHistory.push(spinResult);
+                if (this.spinHistory.length > 100) this.spinHistory.shift();
+
+                this.updateNumberStats(spinResult);
+                this.updateStreak(spinResult);
+                this.saveData();
+
+                if (this.spinHistory.length < 5) {
+                    return {
+                        numbers: [],
+                        confidence: 0,
+                        color: null,
+                        hotNumbers: [],
+                        coldNumbers: [],
+                        colorDistribution: { red: 0, black: 0, green: 0 },
+                        colorProb: { red: 0, black: 0 },
+                        evenOddProb: { even: 0, odd: 0 },
+                        patternScore: 0,
+                        groupBet: null,
+                        lossStreak: this.lossStreak
+                    };
+                }
+
+                const prediction = this.makePrediction();
+                return {
+                    numbers: prediction.numbers,
+                    confidence: prediction.confidence,
+                    color: prediction.numbers[0] !== undefined ? this.getColor(prediction.numbers[0]) : null,
+                    hotNumbers: this.getHotNumbers(3),
+                    coldNumbers: this.getColdNumbers(3),
+                    colorDistribution: this.getColorDistribution(),
+                    colorProb: this.getColorProbability(),
+                    evenOddProb: this.getEvenOddProbability(),
+                    patternScore: this.calculatePatternScore(),
+                    groupBet: this.getGroupBet(),
+                    lossStreak: this.lossStreak
+                };
+            }
+
+            updateNumberStats(spinResult) {
+                this.hotNumbers.set(spinResult, (this.hotNumbers.get(spinResult) || 0) + 1);
+            }
+
+            updateStreak(spinResult) {
+                const color = this.getColor(spinResult);
+                this.streakCounter[color]++;
+                Object.keys(this.streakCounter).forEach(c => {
+                    if (c !== color) {
+                        this.streakCounter[c] = 0;
+                    }
+                });
+            }
+
+            makePrediction() {
+                const lastNumbers = this.spinHistory.slice(-10);
+                const numberCounts = {};
+                lastNumbers.forEach(num => {
+                    numberCounts[num] = (numberCounts[num] || 0) + 1;
+                });
+
+                const sectorScores = this.analyzeWheelSectors();
+                const streakFactor = this.calculateStreakFactor();
+                const frequencyWeight = lastNumbers.length > 7 ? 0.4 : 0.5;
+                const sectorWeight = lastNumbers.length > 7 ? 0.4 : 0.3;
+                const streakWeight = 1 - frequencyWeight - sectorWeight;
+
+                const scores = [];
+                for (let i = 0; i <= 36; i++) {
+                    const frequencyScore = (numberCounts[i] || 0) / 10;
+                    const sectorScore = sectorScores[i] || 0;
+                    const totalScore = (1 - frequencyScore) * frequencyWeight + sectorScore * sectorWeight + streakFactor * streakWeight;
+                    scores.push({ number: i, score: totalScore });
+                }
+
+                scores.sort((a, b) => b.score - a.score);
+                const topNumbers = scores.slice(0, 3).map(s => s.number);
+                const confidence = Math.min(85, scores[0].score * 100);
+
+                return { numbers: topNumbers, confidence };
+            }
+
+            analyzeWheelSectors() {
+                const sectors = {};
+                this.spinHistory.slice(-10).forEach(num => {
+                    const index = this.wheelLayout.indexOf(num);
+                    if (index !== -1) {
+                        const neighbors = [
+                            this.wheelLayout[(index - 1 + 37) % 37],
+                            num,
+                            this.wheelLayout[(index + 1) % 37]
+                        ];
+                        neighbors.forEach(n => {
+                            sectors[n] = (sectors[n] || 0) + 0.3;
+                        });
+                    }
+                });
+                return sectors;
+            }
+
+            calculateStreakFactor() {
+                const maxStreak = Math.max(...Object.values(this.streakCounter));
+                return maxStreak > 2 ? 0.7 : maxStreak / 4;
+            }
+
+            calculatePatternScore() {
+                const lastNumbers = this.spinHistory.slice(-10);
+                if (lastNumbers.length < 6) return 0;
+
+                let patternScore = 0;
+                const colors = lastNumbers.map(num => this.getColor(num));
+                for (let i = 0; i < colors.length - 2; i++) {
+                    if (colors[i] === colors[i + 2]) patternScore += 10;
+                }
+                const numberCounts = {};
+                lastNumbers.forEach(num => {
+                    numberCounts[num] = (numberCounts[num] || 0) + 1;
+                });
+                patternScore += Object.values(numberCounts).filter(c => c > 1).length * 5;
+
+                return Math.min(100, patternScore);
+            }
+
+            getHotNumbers(count) {
+                return Array.from(this.hotNumbers.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, count)
+                    .map(([num]) => num);
+            }
+
+            getColdNumbers(count) {
+                const last20 = this.spinHistory.slice(-20);
+                const appeared = new Set(last20);
+                return Array.from({ length: 37 }, (_, i) => i)
+                    .filter(num => !appeared.has(num))
+                    .slice(0, count);
+            }
+
+            getGroupBet() {
+                const last10 = this.spinHistory.slice(-10);
+                const dozenCounts = [0, 0, 0];
+                last10.forEach(num => {
+                    const dozen = this.getDozen(num);
+                    if (dozen) dozenCounts[dozen - 1]++;
+                });
+                const bestDozen = dozenCounts.indexOf(Math.max(...dozenCounts)) + 1;
+                return dozenCounts[bestDozen - 1] >= 3 ? `دوجین ${bestDozen}` : '';
+            }
+
+            getColorDistribution() {
+                const distribution = { red: 0, black: 0, green: 0 };
+                this.spinHistory.forEach(num => {
+                    distribution[this.getColor(num)]++;
+                });
+                return distribution;
+            }
+
+            getColorProbability() {
+                const total = this.spinHistory.length || 1;
+                const distribution = this.getColorDistribution();
+                return {
+                    red: ((distribution.red / total) * 100).toFixed(1),
+                    black: ((distribution.black / total) * 100).toFixed(1)
+                };
+            }
+
+            getEvenOddProbability() {
+                const total = this.spinHistory.length || 1;
+                let even = 0, odd = 0;
+                this.spinHistory.forEach(num => {
+                    if (num !== 0) {
+                        if (this.isEven(num)) even++;
+                        else odd++;
+                    }
+                });
+                return {
+                    even: ((even / total) * 100).toFixed(1),
+                    odd: ((odd / total) * 100).toFixed(1)
+                };
+            }
+
+            saveData() {
+                try {
+                    localStorage.setItem('spinHistory', JSON.stringify(this.spinHistory));
+                    localStorage.setItem('hotNumbers', JSON.stringify([...this.hotNumbers]));
+                    localStorage.setItem('strategyHistory', JSON.stringify(this.strategyHistory));
+                } catch (e) {
+                    console.error("خطا در ذخیره داده‌ها:", e);
+                }
+            }
+
+            saveStrategy(prediction) {
+                this.strategyHistory.push({
+                    timestamp: new Date().toISOString(),
+                    prediction,
+                    lastSpin: this.spinHistory[this.spinHistory.length - 1],
+                    lossStreak: this.lossStreak
+                });
+                if (this.strategyHistory.length > 50) this.strategyHistory.shift();
+                this.saveData();
+            }
+        }
+
+        class RouletteGame {
+            constructor() {
+                this.predictionEngine = new PredictionEngine();
+                this.lastSpinResult = null;
+                this.isSpinning = false;
+                this.colorChart = null;
+                this.hotNumbersChart = null;
+                try {
+                    if (typeof THREE === 'undefined') throw new Error("کتابخانه Three.js لود نشد");
+                    if (typeof Chart === 'undefined') throw new Error("کتابخانه Chart.js لود نشد");
+                    this.initUI();
+                    this.init3DView();
+                    this.initCharts();
+                    this.updateHistoryUI();
+                } catch (error) {
+                    console.error("خطا در مقداردهی اولیه:", error);
+                    this.showError(`نمی‌توان بازی را شروع کرد: ${error.message}`);
+                }
+            }
+
+            initUI() {
+                const elements = {
+                    spinBtn: document.getElementById('spin-btn'),
+                    analyzeBtn: document.getElementById('analyze-btn'),
+                    resetBtn: document.getElementById('reset-btn'),
+                    submitLiveBtn: document.getElementById('submit-live-btn'),
+                    saveStrategyBtn: document.getElementById('save-strategy-btn'),
+                    liveInput: document.getElementById('live-input'),
+                    errorMessage: document.getElementById('error-message'),
+                    warningMessage: document.getElementById('warning-message')
+                };
+
+                for (const [key, element] of Object.entries(elements)) {
+                    if (!element) throw new Error(`عنصر رابط کاربری ${key} یافت نشد`);
+                }
+
+                this.elements = elements;
+                elements.spinBtn.addEventListener('click', () => this.spinWheel());
+                elements.analyzeBtn.addEventListener('click', () => this.analyze());
+                elements.resetBtn.addEventListener('click', () => this.resetGame());
+                elements.submitLiveBtn.addEventListener('click', () => this.submitLiveSpin());
+                elements.saveStrategyBtn.addEventListener('click', () => this.saveCurrentStrategy());
+            }
+
+            init3DView() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+                const container = document.getElementById('roulette-container');
+                if (!container) throw new Error("محفظه رولت یافت نشد");
+                container.appendChild(this.renderer.domElement);
+
+                const wheelGeometry = new THREE.CylinderGeometry(5, 5, 0.3, 32);
+                const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
+                this.wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                this.scene.add(this.wheel);
+
+                const light = new THREE.PointLight(0xffffff, 1, 100);
+                light.position.set(0, 5, 5);
+                this.scene.add(light);
+                this.scene.add(new THREE.AmbientLight(0x404040));
+
+                this.camera.position.z = 7;
+                this.animate();
+            }
+
+            initCharts() {
+                const colorCtx = document.getElementById('color-chart').getContext('2d');
+                this.colorChart = new Chart(colorCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['قرمز', 'سیاه', 'سبز'],
+                        datasets: [{
+                            label: 'توزیع رنگ',
+                            data: [0, 0, 0],
+                            backgroundColor: ['#ff5555', '#dddddd', '#55ff55'],
+                            borderColor: ['#ff0000', '#aaaaaa', '#00ff00'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, ticks: { color: '#ffffff' } },
+                            x: { ticks: { color: '#ffffff' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                const hotNumbersCtx = document.getElementById('hot-numbers-chart').getContext('2d');
+                this.hotNumbersChart = new Chart(hotNumbersCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'اعداد داغ',
+                            data: [],
+                            backgroundColor: '#00ffff',
+                            borderColor: '#00aaaa',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, ticks: { color: '#ffffff' } },
+                            x: { ticks: { color: '#ffffff' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            spinWheel() {
+                if (this.isSpinning) return;
+
+                this.isSpinning = true;
+                this.elements.spinBtn.disabled = true;
+                this.clearError();
+
+                const duration = 3000; // 3 ثانیه
+                const startTime = performance.now();
+                const startRotation = this.wheel.rotation.y;
+                const totalRotation = Math.PI * 6 + Math.random() * Math.PI; // 3 دور + تصادفی
+
+                const animateSpin = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const ease = progress < 0.5
+                        ? 2 * progress * progress
+                        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                    
+                    this.wheel.rotation.y = startRotation + totalRotation * ease;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateSpin);
+                    } else {
+                        this.finishSpin();
+                    }
+                };
+
+                requestAnimationFrame(animateSpin);
+            }
+
+            finishSpin() {
+                this.lastSpinResult = Math.floor(Math.random() * 37);
+                this.isSpinning = false;
+                this.elements.spinBtn.disabled = false;
+                this.analyze();
+            }
+
+            submitLiveSpin() {
+                this.clearError();
+                const input = this.elements.liveInput;
+                const values = input.value.split(',')
+                    .map(v => parseInt(v.trim()))
+                    .filter(v => !isNaN(v) && Number.isInteger(v) && v >= 0 && v <= 36);
+
+                if (values.length === 0) {
+                    this.showError("لطفاً اعداد صحیح بین ۰ تا ۳۶ وارد کنید (مثال: ۵,۱۲,۰)");
+                    return;
+                }
+
+                try {
+                    values.forEach(value => {
+                        this.lastSpinResult = value;
+                        this.analyze();
+                    });
+                    input.value = '';
+                } catch (error) {
+                    this.showError(`تحلیل ناموفق: ${error.message}`);
+                }
+            }
+
+            analyze() {
+                if (this.lastSpinResult === null) {
+                    this.showError("لطفاً ابتدا چرخ را بچرخانید یا چرخش زنده وارد کنید!");
+                    return;
+                }
+
+                try {
+                    const lastPrediction = document.getElementById('predicted-numbers').textContent.split('، ').map(Number).filter(n => !isNaN(n));
+                    const prediction = this.predictionEngine.analyzeSpin(this.lastSpinResult, lastPrediction);
+                    this.updatePredictionUI(prediction);
+                    this.updateHistoryUI();
+                    this.updateCharts(prediction);
+                    this.updateWarnings(prediction);
+                } catch (error) {
+                    console.error("خطا در تحلیل:", error);
+                    this.showError(`تحلیل ناموفق: ${error.message}`);
+                }
+            }
+
+            saveCurrentStrategy() {
+                try {
+                    const lastPrediction = document.getElementById('predicted-numbers').textContent.split('، ').map(Number).filter(n => !isNaN(n));
+                    const prediction = this.predictionEngine.analyzeSpin(this.lastSpinResult, lastPrediction);
+                    this.predictionEngine.saveStrategy(prediction);
+                    alert("استراتژی با موفقیت ذخیره شد!");
+                } catch (error) {
+                    this.showError("خطا در ذخیره استراتژی: " + error.message);
+                }
+            }
+
+            updatePredictionUI(prediction) {
+                document.getElementById('predicted-numbers').textContent = 
+                    prediction.numbers.length > 0 ? prediction.numbers.join('، ') : '--';
+                document.getElementById('predicted-color').textContent = 
+                    prediction.color || '--';
+                document.getElementById('confidence').textContent = 
+                    `${prediction.confidence.toFixed(1)}٪`;
+                document.getElementById('confidence-bar').style.width = 
+                    `${prediction.confidence}%`;
+                document.getElementById('pattern-score').textContent = 
+                    `${prediction.patternScore.toFixed(1)}٪`;
+                document.getElementById('hot-numbers').textContent = 
+                    prediction.hotNumbers.length > 0 ? prediction.hotNumbers.join('، ') : '--';
+                document.getElementById('cold-numbers').textContent = 
+                    prediction.coldNumbers.length > 0 ? prediction.coldNumbers.join('، ') : '--';
+                document.getElementById('color-prob').textContent = 
+                    prediction.colorProb ? `قرمز: ${prediction.colorProb.red}٪، سیاه: ${prediction.colorProb.black}٪` : '--';
+                document.getElementById('even-odd-prob').textContent = 
+                    prediction.evenOddProb ? `زوج: ${prediction.evenOddProb.even}٪، فرد: ${prediction.evenOddProb.odd}٪` : '--';
+                document.getElementById('group-bet').textContent = 
+                    prediction.groupBet || '--';
+            }
+
+            updateHistoryUI() {
+                const historyList = document.getElementById('history-list');
+                historyList.innerHTML = '';
+
+                this.predictionEngine.spinHistory.slice().reverse().forEach((num, index) => {
+                    const color = this.predictionEngine.getColor(num);
+                    const item = document.createElement('div');
+                    item.className = `number-${color.toLowerCase()}`;
+                    item.textContent = `چرخش ${this.predictionEngine.spinHistory.length - index}: ${num}`;
+                    historyList.appendChild(item);
+                });
+            }
+
+            updateCharts(prediction) {
+                this.colorChart.data.datasets[0].data = [
+                    prediction.colorDistribution.red,
+                    prediction.colorDistribution.black,
+                    prediction.colorDistribution.green
+                ];
+                this.colorChart.update();
+
+                this.hotNumbersChart.data.labels = prediction.hotNumbers;
+                this.hotNumbersChart.data.datasets[0].data = prediction.hotNumbers.map(num => 
+                    this.predictionEngine.hotNumbers.get(num) || 0
+                );
+                this.hotNumbersChart.update();
+            }
+
+            updateWarnings(prediction) {
+                this.elements.warningMessage.textContent = prediction.lossStreak > 3 
+                    ? `هشدار: ${prediction.lossStreak} باخت متوالی! پیشنهاد می‌کنیم روی شرط گروهی مثل ${prediction.groupBet || 'قرمز/سیاه'} شرط ببندید.` 
+                    : '';
+            }
+
+            resetGame() {
+                this.predictionEngine = new PredictionEngine();
+                this.lastSpinResult = null;
+                localStorage.removeItem('spinHistory');
+                localStorage.removeItem('hotNumbers');
+                localStorage.removeItem('strategyHistory');
+                this.updatePredictionUI({
+                    numbers: [],
+                    confidence: 0,
+                    color: null,
+                    hotNumbers: [],
+                    coldNumbers: [],
+                    colorDistribution: { red: 0, black: 0, green: 0 },
+                    colorProb: { red: 0, black: 0 },
+                    evenOddProb: { even: 0, odd: 0 },
+                    patternScore: 0,
+                    groupBet: null,
+                    lossStreak: 0
+                });
+                this.updateHistoryUI();
+                this.updateCharts({
+                    colorDistribution: { red: 0, black: 0, green: 0 }
+                });
+                this.clearError();
+                this.elements.warningMessage.textContent = '';
+                alert("بازی با موفقیت بازنشانی شد");
+            }
+
+            showError(message) {
+                this.elements.errorMessage.textContent = message;
+            }
+
+            clearError() {
+                this.elements.errorMessage.textContent = '';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                window.game = new RouletteGame();
+            } catch (error) {
+                console.error("خطا در شروع بازی:", error);
+                alert(`نمی‌توان بازی را شروع کرد: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>
